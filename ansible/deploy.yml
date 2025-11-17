@@ -1,0 +1,113 @@
+---
+- name: Deploy Simple Gemini Chatbot to EC2
+  hosts: chatbot
+  become: yes
+
+  vars_prompt:
+    - name: gemini_api_key
+      prompt: "Enter your Gemini API Key (from local .env): "
+      private: no
+
+  vars:
+    repo_url: https://github.com/atul-harsh33108/just-simple-chatbot.git
+    app_dir: /opt/chatbot
+
+  tasks:
+
+    - name: Update apt cache (idempotent)
+      apt:
+        update_cache: yes
+      tags: update
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - git
+          - python3-pip
+          - python3-venv
+        state: present
+      tags: install
+
+    - name: Clone Git repo (if not exists)
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: main
+        force: no
+      tags: deploy
+
+    - name: Set ownership of app directory
+      file:
+        path: "{{ app_dir }}"
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+      tags: deploy
+
+    - name: Create virtual environment
+      command: python3 -m venv "{{ app_dir }}/venv"
+      args:
+        creates: "{{ app_dir }}/venv/bin/activate"
+      tags: venv
+
+    - name: Upgrade pip, setuptools, and wheel
+      command: "{{ app_dir }}/venv/bin/pip install --upgrade pip setuptools wheel"
+      tags: install
+
+    - name: Install Python requirements
+      pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ app_dir }}/venv"
+      notify: restart service
+      tags: install
+
+    - name: Create .env file with API key (owned by ubuntu)
+      copy:
+        content: "GEMINI_API_KEY={{ gemini_api_key }}\n"
+        dest: "{{ app_dir }}/.env"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+      notify: restart service
+      tags: config
+
+    - name: Create systemd service file
+      copy:
+        dest: /etc/systemd/system/chatbot.service
+        content: |
+          [Unit]
+          Description=Simple Gemini Chatbot (Streamlit)
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=ubuntu
+          WorkingDirectory={{ app_dir }}
+          Environment=PATH={{ app_dir }}/venv/bin
+          ExecStart={{ app_dir }}/venv/bin/streamlit run {{ app_dir }}/app.py --server.port=8501 --server.address=0.0.0.0
+          Restart=always
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: restart service
+      tags: service
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+      tags: service
+
+    - name: Enable and start chatbot service
+      systemd:
+        name: chatbot
+        enabled: yes
+        state: started
+      tags: service
+
+  handlers:
+    - name: Restart chatbot service
+      systemd:
+        name: chatbot
+        state: restarted
+      listen: restart service

@@ -1,19 +1,71 @@
-# Python venv
+# === Python & Virtual Environment ===
 venv/
-
-# Env files
-.env
-
-# Logs and caches
-*.log
-__pycache__/
+env/
 *.pyc
-.pytest_cache/
+__pycache__/
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
 
-# OS
+# === Terraform ===
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfstate
+*.tfvars
+*.tfplan
+
+# === Ansible ===
+hosts.ini
+*.retry
+ansible.log
+
+# === Secrets & Credentials ===
+.env
+*.pem
+*.key
+*.crt
+*.cer
+*.ppk
 .DS_Store
 Thumbs.db
 
-# IDE
+# === IDE / Editor ===
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# === OS / System Files ===
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+
+# === Local Testing ===
+test/
+tests/
+*.csv
+*.json
+*.sqlite3
+
+# === Streamlit Cache ===
+.streamlit/
+.streamlit/secrets.toml
+
+# === Build / Dist ===
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# === Misc ===
+*.swp
+*~
+.#*
